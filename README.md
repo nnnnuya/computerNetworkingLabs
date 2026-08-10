@@ -1,29 +1,93 @@
-# Computer Networking Labs — BITS 2343
+# Mini Project — Enterprise HQ & Branches Network (BITS 2343)
 
-Hands-on networking laboratory work covering the full path from network fundamentals to a multi-site enterprise design, built and verified in Cisco Packet Tracer with Cisco IOS CLI configuration.
+## Overview
 
-## Labs
+Capstone group project (5–6 members) integrating everything from the semester into one enterprise-style simulation: a headquarters network segmented with VLANs and inter-VLAN routing, two branch networks sized with VLSM, EIGRP dynamic routing across all routers, ACL-enforced communication policy, distributed DHCP with relay agents, and Web/DNS/Mail services topped with a custom-hosted homepage. Deliverables were a Packet Tracer simulation, a written report (physical diagram, logical diagram, addressing table, verification of every requirement), and a recorded video demonstration.
 
-| Lab | Topic | Key Skills |
-| --- | ----- | ---------- |
-| [Lab 1](lab01-network-fundamentals/) | Network Fundamentals | Terminology, architecture principles, CIA triad |
-| [Lab W2](lab02-packet-tracer-basics/) | Building a Simple Network | Packet Tracer, cabling, IPv4, ICMP testing |
-| [Lab W3](lab03-client-server-services/) | Server & Client Configuration | DHCP, DNS, HTTP, FTP, SMTP/POP3 |
-| [Lab W6](lab06-ip-addressing-subnetting/) | IP Addressing & Subnetting | FLSM, VLSM design |
-| [Lab W7](lab07-vlsm-implementation/) | Implementing VLSM | VLSM in practice, DHCP, DNS/web services |
-| [Lab W8](lab08-basic-router-configuration/) | Basic Router Configuration | Cisco IOS CLI, interface config, verification |
-| [Lab W9](lab09-static-routing/) | Static Routing | `ip route`, routing tables, loopbacks |
-| [Lab W10](lab10-rip-dynamic-routing/) | Dynamic Routing (RIPv2) | RIP v2, convergence, `debug ip rip` |
-| [Lab W11](lab11-vlan-configuration/) | VLANs & Trunking | VLANs, 802.1Q, router-on-a-stick, port security |
-| [Lab W12](lab12-access-control-lists/) | Access Control Lists | Standard/extended ACLs, security policy |
-| [Mini Project](mini-project-enterprise-network/) | Enterprise HQ & Branches Network | VLSM, VLANs, EIGRP, ACLs, DHCP relay, services |
+## Objectives
 
-## Environment
+Implement and verify eight requirements:
 
-* **Simulator:** Cisco Packet Tracer
-* **Devices:** Cisco 2911 routers, 2950/2950T switches, PCs, servers, hubs
-* **Configuration:** Cisco IOS command-line interface
+1. **IP address allocation** — HQ from `192.168.X.64/26` and Branches from `172.X.0.0/16` (X = group number; this group's X = 150), with the ISP simulated as Loopback X
+2. **VLANs** — Blue, Red, and Orange VLANs for HQ host groups
+3. **VLAN port assignment** — access ports for hosts, trunk ports between switches and to the HQ router
+4. **Inter-VLAN routing** — dot1q subinterfaces on the HQ router
+5. **Routing & access control** — EIGRP everywhere plus ACLs enforcing the communication policy
+6. **DHCP** — dynamic addressing for all hosts except the Orange network, using per-VLAN DHCP servers and `ip helper-address` relay
+7. **Web, DNS & Mail servers** — including mail accounts for every group member
+8. **Homepage customization** — site hosted at `<group_name>.utem.edu.my` with member photos and names
 
-## Skills Summary
+## Technologies & Tools
 
-IPv4 addressing & subnetting (FLSM/VLSM) · Router & switch configuration · Static and dynamic routing (RIP v2, EIGRP) · VLANs, 802.1Q trunking & inter-VLAN routing · ACL-based traffic filtering · DHCP/DNS/HTTP/FTP/Email services · Layer 2 port security · Network verification & troubleshooting
+* Cisco Packet Tracer
+* Cisco IOS CLI (multiple routers and switches; serial DTE/DCE WAN links, UTP Cat5 LAN cabling)
+* VLSM, VLANs, 802.1Q trunking and subinterfaces, EIGRP, ACLs, DHCP + DHCP relay (`ip helper-address`), DNS, HTTP, SMTP/POP3
+
+## Network Topology
+
+Two sites joined over serial WAN links, plus an ISP:
+
+* **HQ** (`192.168.X.64/26`): HQ router → switches S1/S2 serving three VLANs — Blue (hosts B1–B2 + Blue DHCP server), Red (hosts M1–M8 + Red DHCP server), Orange (J1–J3 + Orange Web server)
+* **Branches** (`172.X.0.0/16`): routers BRCH1 and BRCH2 → switches S3/S4 — Purple network (P1–P3 + Purple DHCP & DNS server, sized for **16,000 addresses**) and Green network (G1–G4, sized for **4,000 addresses**)
+* **ISP** reachable via Loopback X
+
+## IP Addressing
+
+Designed per group from the allocated blocks. With X = 150: HQ = `192.168.150.64/26`, Branches = `172.150.0.0/16`. VLSM sizing constraints: Purple ≥ 16,000 hosts (/18-scale block) and Green ≥ 4,000 hosts (/20-scale block). The final per-device addressing table is part of the submitted report — *specific assignments not included in this worksheet, see the project report*.
+
+## Communication Policy (enforced with EIGRP + ACLs)
+
+* All Branch hosts communicate with each other, and with **only** the Orange network at HQ
+* Routes taken by Branch hosts are identified and documented
+* Red VLAN and Blue VLAN hosts communicate only **within their own VLAN**, plus the Web Server (Orange server)
+
+## Network Configuration Highlights
+
+Representative configuration areas required by the spec (full configs are in the report appendix):
+
+```text
+! Inter-VLAN routing on HQ router
+interface GigabitEthernet0/0.<VLAN_NUMBER>
+ encapsulation dot1q <VLAN_NUMBER>
+ ip address <subif-ip> <mask>
+
+! EIGRP on all HQ and Branch routers
+router eigrp <AS>
+ network ...
+
+! DHCP relay on router interfaces whose clients use a remote DHCP server
+interface <client-facing-interface>
+ ip helper-address <dhcp-server-ip>
+```
+
+DHCP assignments: Red VLAN ← Red Server, Blue VLAN ← Blue Server, Green + Purple networks ← Purple Server (in the Branches network). Orange network hosts are statically addressed.
+
+## Verification & Testing
+
+Per the report requirements, every listed requirement was verified with a suitable command (e.g., `ping`/`traceroute` for the policy matrix, `show ip route` for EIGRP routes, `ipconfig` for DHCP leases, browser access to `<group_name>.utem.edu.my`, and sending/receiving mail between member accounts), captured in the Result & Discussion section and demonstrated in the video.
+
+## Results
+
+A converged multi-site network meeting all eight requirements, documented with physical/logical diagrams, a full addressing table, command-verified results per requirement, and complete router/switch configurations in the appendix. *(Detailed per-test outputs live in the group report, which is not part of this worksheet.)*
+
+## Key Learning Outcomes
+
+* Designing a complete enterprise addressing plan (VLSM at scale — 16k and 4k host blocks)
+* Combining VLAN segmentation, EIGRP routing, and ACL policy into one coherent architecture
+* Centralized DHCP with relay agents across routed boundaries
+* Team-based delivery: documentation, verification evidence, and presentation
+
+## Skills Demonstrated
+
+* Enterprise network design (multi-site, HQ/branch)
+* VLSM subnetting at scale
+* VLAN + 802.1Q + inter-VLAN routing
+* EIGRP configuration
+* ACL security policy design
+* DHCP relay (`ip helper-address`)
+* Web/DNS/Mail service deployment
+* Technical documentation and team collaboration
+
+## Portfolio Relevance
+
+This is the closest coursework analogue to a real enterprise deployment: requirements-driven design, security policy translated into ACLs, multi-site routing, and formal documentation with verification evidence. It demonstrates the ability to integrate individual skills into a working system — precisely what internship projects demand.
